@@ -1,38 +1,46 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { db } from "./db";
+import {
+  themeRules,
+  type ThemeRule,
+  type InsertThemeRule,
+} from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getThemeRules(): Promise<ThemeRule[]>;
+  getThemeRule(id: number): Promise<ThemeRule | undefined>;
+  createThemeRule(rule: InsertThemeRule): Promise<ThemeRule>;
+  updateThemeRule(id: number, updates: Partial<InsertThemeRule>): Promise<ThemeRule>;
+  deleteThemeRule(id: number): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  async getThemeRules(): Promise<ThemeRule[]> {
+    return await db.select().from(themeRules);
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getThemeRule(id: number): Promise<ThemeRule | undefined> {
+    const [rule] = await db.select().from(themeRules).where(eq(themeRules.id, id));
+    return rule;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async createThemeRule(rule: InsertThemeRule): Promise<ThemeRule> {
+    const [newRule] = await db.insert(themeRules).values(rule).returning();
+    return newRule;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async updateThemeRule(id: number, updates: Partial<InsertThemeRule>): Promise<ThemeRule> {
+    const [updated] = await db
+      .update(themeRules)
+      .set(updates)
+      .where(eq(themeRules.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteThemeRule(id: number): Promise<void> {
+    await db.delete(themeRules).where(eq(themeRules.id, id));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
