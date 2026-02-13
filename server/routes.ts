@@ -25,13 +25,13 @@ export async function registerRoutes(
           dateParams.push(String(startDate), String(endDate));
         }
 
-        // Total de atendimentos filtrado pelo período
+        // Total de atendimentos filtrado pelo período (contando protocolos distintos)
         const [totals] = await conn.query<RowDataPacket[]>(`
           SELECT
-            COUNT(*) AS total,
-            SUM(CASE WHEN DATE(\`data e hora de fim\`) = CURDATE() THEN 1 ELSE 0 END) AS hoje,
-            SUM(CASE WHEN YEARWEEK(\`data e hora de fim\`, 1) = YEARWEEK(CURDATE(), 1) THEN 1 ELSE 0 END) AS semana,
-            SUM(CASE WHEN YEAR(\`data e hora de fim\`) = YEAR(CURDATE()) AND MONTH(\`data e hora de fim\`) = MONTH(CURDATE()) THEN 1 ELSE 0 END) AS mes
+            COUNT(DISTINCT protocolo) AS total,
+            COUNT(DISTINCT CASE WHEN DATE(\`data e hora de fim\`) = CURDATE() THEN protocolo END) AS hoje,
+            COUNT(DISTINCT CASE WHEN YEARWEEK(\`data e hora de fim\`, 1) = YEARWEEK(CURDATE(), 1) THEN protocolo END) AS semana,
+            COUNT(DISTINCT CASE WHEN YEAR(\`data e hora de fim\`) = YEAR(CURDATE()) AND MONTH(\`data e hora de fim\`) = MONTH(CURDATE()) THEN protocolo END) AS mes
           FROM \`${TABLE_NAME}\`
           WHERE \`data e hora de fim\` IS NOT NULL
             ${dateFilter}
@@ -47,11 +47,11 @@ export async function registerRoutes(
             ${dateFilter}
         `, dateParams);
 
-        // Atendimentos por canal
+        // Atendimentos por canal (protocolos distintos)
         const [porCanal] = await conn.query<RowDataPacket[]>(`
           SELECT
             canal AS nome,
-            COUNT(*) AS total
+            COUNT(DISTINCT protocolo) AS total
           FROM \`${TABLE_NAME}\`
           WHERE \`data e hora de fim\` IS NOT NULL
             ${dateFilter}
@@ -59,11 +59,11 @@ export async function registerRoutes(
           ORDER BY total DESC
         `, dateParams);
 
-        // Atendimentos por casa — COALESCE empty/null to 'Falta de Interação'
+        // Atendimentos por casa (protocolos distintos) — COALESCE empty/null to 'Falta de Interação'
         const [porCasa] = await conn.query<RowDataPacket[]>(`
           SELECT
             COALESCE(NULLIF(TRIM(casa), ''), 'Falta de Interação') AS nome,
-            COUNT(*) AS total
+            COUNT(DISTINCT protocolo) AS total
           FROM \`${TABLE_NAME}\`
           WHERE \`data e hora de fim\` IS NOT NULL
             ${dateFilter}
@@ -72,11 +72,11 @@ export async function registerRoutes(
           LIMIT 10
         `, dateParams);
 
-        // Atendimentos por resumo da conversa
+        // Atendimentos por resumo da conversa (protocolos distintos)
         const [porResumo] = await conn.query<RowDataPacket[]>(`
           SELECT
             \`resumo da conversa\` AS nome,
-            COUNT(*) AS total
+            COUNT(DISTINCT protocolo) AS total
           FROM \`${TABLE_NAME}\`
           WHERE \`data e hora de fim\` IS NOT NULL
             AND \`resumo da conversa\` IS NOT NULL
@@ -97,7 +97,7 @@ export async function registerRoutes(
         const [timeline] = await conn.query<RowDataPacket[]>(`
           SELECT
             DATE(\`data e hora de fim\`) AS data,
-            COUNT(*) AS total
+            COUNT(DISTINCT protocolo) AS total
           FROM \`${TABLE_NAME}\`
           WHERE \`data e hora de fim\` IS NOT NULL
             ${timelineFilter}
@@ -125,25 +125,29 @@ export async function registerRoutes(
     }
   });
 
-  // GET /api/recentes - Ultimos atendimentos finalizados
-  // Supports optional ?limit=50 (default 50, max 100)
+  // GET /api/recentes - Ultimos atendimentos finalizados (sem duplicatas de protocolo)
   app.get("/api/recentes", async (req, res) => {
     try {
       const [rows] = await pool.query<RowDataPacket[]>(`
         SELECT
-          id,
-          contato,
-          identificador,
-          protocolo,
-          canal,
-          \`data e hora de inicio\` AS dataHoraInicio,
-          \`data e hora de fim\` AS dataHoraFim,
-          \`tipo de canal\` AS tipoCanal,
-          \`resumo da conversa\` AS resumoConversa,
-          COALESCE(NULLIF(TRIM(casa), ''), 'Falta de Interação') AS casa
-        FROM \`${TABLE_NAME}\`
-        WHERE \`data e hora de fim\` IS NOT NULL
-        ORDER BY \`data e hora de fim\` DESC
+          t.id,
+          t.contato,
+          t.identificador,
+          t.protocolo,
+          t.canal,
+          t.\`data e hora de inicio\` AS dataHoraInicio,
+          t.\`data e hora de fim\` AS dataHoraFim,
+          t.\`tipo de canal\` AS tipoCanal,
+          t.\`resumo da conversa\` AS resumoConversa,
+          COALESCE(NULLIF(TRIM(t.casa), ''), 'Falta de Interação') AS casa
+        FROM \`${TABLE_NAME}\` t
+        INNER JOIN (
+          SELECT MAX(id) AS max_id
+          FROM \`${TABLE_NAME}\`
+          WHERE \`data e hora de fim\` IS NOT NULL
+          GROUP BY protocolo
+        ) latest ON t.id = latest.max_id
+        ORDER BY t.\`data e hora de fim\` DESC
       `);
 
       res.json(rows);
@@ -153,7 +157,7 @@ export async function registerRoutes(
     }
   });
 
-  // GET /api/protocolo/:protocolo - Busca por protocolo
+  // GET /api/protocolo/:protocolo - Busca por protocolo (sem duplicatas)
   app.get("/api/protocolo/:protocolo", async (req, res) => {
     try {
       const { protocolo } = req.params;
@@ -172,7 +176,8 @@ export async function registerRoutes(
           COALESCE(NULLIF(TRIM(casa), ''), 'Falta de Interação') AS casa
         FROM \`${TABLE_NAME}\`
         WHERE protocolo = ?
-        LIMIT 10
+        ORDER BY id DESC
+        LIMIT 1
       `, [protocolo]);
 
       if (rows.length === 0) {
