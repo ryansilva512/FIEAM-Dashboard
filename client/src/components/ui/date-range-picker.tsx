@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
-import { format, startOfWeek, startOfMonth, endOfMonth, subDays, subMonths, subWeeks, startOfYear } from "date-fns";
+import { format, startOfWeek, startOfMonth, endOfMonth, subDays, subMonths, subWeeks, startOfYear, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarDays, ChevronRight, X, Check, Clock } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, X, Check, Clock, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DayPicker } from "react-day-picker";
 import type { DateRange } from "react-day-picker";
@@ -119,11 +119,16 @@ export function DateRangePicker({ startDate, endDate, onApply }: DateRangePicker
             ? `${format(selected.from, "dd MMM yyyy", { locale: ptBR })} — ${format(selected.to, "dd MMM yyyy", { locale: ptBR })}`
             : "Selecione um período";
 
+    // Custom navigation handlers
+    const goToPrevMonth = useCallback(() => setMonth((m) => subMonths(m, 1)), []);
+    const goToNextMonth = useCallback(() => setMonth((m) => addMonths(m, 1)), []);
+    const goToPrevYear = useCallback(() => setMonth((m) => subMonths(m, 12)), []);
+    const goToNextYear = useCallback(() => setMonth((m) => addMonths(m, 12)), []);
+
     const handlePreset = useCallback((preset: Preset) => {
         const range = preset.getRange();
         setSelected(range);
         setActivePreset(preset.label);
-        // Navigate calendar to show the start of the selected range
         setMonth(new Date(range.from.getFullYear(), range.from.getMonth()));
     }, []);
 
@@ -146,13 +151,17 @@ export function DateRangePicker({ startDate, endDate, onApply }: DateRangePicker
 
     const handleSelect = useCallback((range: DateRange | undefined) => {
         setSelected(range);
-        setActivePreset(null); // Clear preset highlight when manual selection
+        setActivePreset(null);
     }, []);
 
     const daysCount =
         selected?.from && selected?.to
             ? Math.ceil((selected.to.getTime() - selected.from.getTime()) / (1000 * 60 * 60 * 24)) + 1
             : 0;
+
+    // Month labels for the two visible months
+    const month1Label = format(month, "MMMM yyyy", { locale: ptBR });
+    const month2Label = format(addMonths(month, 1), "MMMM yyyy", { locale: ptBR });
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -168,7 +177,7 @@ export function DateRangePicker({ startDate, endDate, onApply }: DateRangePicker
                 align="end"
                 sideOffset={8}
             >
-                <div className="flex min-h-[420px]">
+                <div className="flex min-h-[440px]">
                     {/* ─── Presets sidebar ──────────────────────── */}
                     <div className="border-r border-[#1a3a5c]/60 w-[180px] flex flex-col bg-[#081422]">
                         <div className="px-4 pt-4 pb-2">
@@ -218,8 +227,55 @@ export function DateRangePicker({ startDate, endDate, onApply }: DateRangePicker
                             </div>
                         </div>
 
-                        {/* Calendar */}
-                        <div className="px-3 pt-2 pb-1 flex-1">
+                        {/* ─── Custom Navigation Bar ───────────────── */}
+                        <div className="flex items-center justify-between px-4 pt-3 pb-1">
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={goToPrevYear}
+                                    title="Ano anterior"
+                                    className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-gray-500 hover:text-white hover:bg-white/10 border border-transparent hover:border-[#1a3a5c] transition-all duration-200"
+                                >
+                                    <ChevronsLeft className="w-4 h-4" />
+                                </button>
+                                <button
+                                    onClick={goToPrevMonth}
+                                    title="Mês anterior"
+                                    className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/10 border border-transparent hover:border-[#1a3a5c] transition-all duration-200"
+                                >
+                                    <ChevronLeft className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            <div className="flex items-center gap-6">
+                                <span className="text-sm font-semibold text-gray-200 capitalize min-w-[120px] text-center">
+                                    {month1Label}
+                                </span>
+                                <span className="text-gray-600">|</span>
+                                <span className="text-sm font-semibold text-gray-200 capitalize min-w-[120px] text-center">
+                                    {month2Label}
+                                </span>
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={goToNextMonth}
+                                    title="Próximo mês"
+                                    className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/10 border border-transparent hover:border-[#1a3a5c] transition-all duration-200"
+                                >
+                                    <ChevronRight className="w-4 h-4" />
+                                </button>
+                                <button
+                                    onClick={goToNextYear}
+                                    title="Próximo ano"
+                                    className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-gray-500 hover:text-white hover:bg-white/10 border border-transparent hover:border-[#1a3a5c] transition-all duration-200"
+                                >
+                                    <ChevronsRight className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Calendar (built-in nav hidden — we use custom nav above) */}
+                        <div className="px-3 pb-1 flex-1">
                             <DayPicker
                                 mode="range"
                                 selected={selected}
@@ -229,17 +285,13 @@ export function DateRangePicker({ startDate, endDate, onApply }: DateRangePicker
                                 month={month}
                                 onMonthChange={setMonth}
                                 showOutsideDays
+                                hideNavigation
                                 className="text-gray-200"
                                 classNames={{
-                                    months: "flex gap-4",
-                                    month: "space-y-3",
-                                    month_caption: "flex justify-center pt-1 relative items-center",
-                                    caption_label: "text-sm font-semibold text-gray-200 capitalize",
-                                    nav: "flex items-center gap-1",
-                                    button_previous:
-                                        "absolute left-1 h-8 w-8 bg-transparent p-0 text-gray-400 hover:text-white hover:bg-white/10 inline-flex items-center justify-center rounded-lg border border-transparent hover:border-[#1a3a5c] transition-all duration-200 z-10",
-                                    button_next:
-                                        "absolute right-1 h-8 w-8 bg-transparent p-0 text-gray-400 hover:text-white hover:bg-white/10 inline-flex items-center justify-center rounded-lg border border-transparent hover:border-[#1a3a5c] transition-all duration-200 z-10",
+                                    months: "flex gap-6",
+                                    month: "space-y-2",
+                                    month_caption: "flex justify-center pt-0 pb-1 items-center",
+                                    caption_label: "text-xs font-medium text-gray-400 capitalize",
                                     month_grid: "w-full border-collapse",
                                     weekdays: "flex",
                                     weekday:
