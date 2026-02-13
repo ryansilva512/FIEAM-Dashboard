@@ -1,10 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { 
   LayoutDashboard, 
-  Upload, 
-  CalendarClock, 
-  Tags, 
-  TableProperties, 
+  Search, 
   Menu,
   X
 } from "lucide-react";
@@ -13,11 +10,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
-  { href: "/overview", label: "Overview", icon: LayoutDashboard },
-  { href: "/time-analysis", label: "Time Analysis", icon: CalendarClock },
-  { href: "/themes", label: "Themes & AI", icon: Tags },
-  { href: "/details", label: "Data Grid", icon: TableProperties },
-  { href: "/import", label: "Import Data", icon: Upload },
+  { href: "/", label: "Visão Geral", icon: LayoutDashboard },
+  { href: "/protocolo", label: "Pesquisar Protocolo", icon: Search },
 ];
 
 export function Sidebar() {
@@ -32,7 +26,7 @@ export function Sidebar() {
       <Button
         variant="ghost"
         size="icon"
-        className="fixed top-4 left-4 z-50 md:hidden"
+        className="fixed top-4 left-4 z-50 md:hidden text-white"
         onClick={toggle}
       >
         {isOpen ? <X /> : <Menu />}
@@ -41,21 +35,33 @@ export function Sidebar() {
       {/* Sidebar Container */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64 bg-card border-r border-border shadow-lg transition-transform duration-300 ease-in-out md:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 w-64 bg-[#1a1a2e] border-r border-[#2a2a4a] shadow-lg transition-transform duration-300 ease-in-out md:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         <div className="flex flex-col h-full">
           {/* Logo Area */}
-          <div className="p-6 border-b border-border/50">
-            <h1 className="text-2xl font-display font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              InsightFlow
-            </h1>
-            <p className="text-xs text-muted-foreground mt-1">Service Analytics Dashboard</p>
+          <div className="p-6 border-b border-[#2a2a4a]">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center">
+                <span className="text-white font-bold text-lg">P</span>
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-white">
+                  Polo BI
+                </h1>
+                <p className="text-xs text-gray-400">Polo Telecom</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Section Label */}
+          <div className="px-6 pt-6 pb-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Dashboards</p>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
             {navItems.map((item) => {
               const isActive = location === item.href;
               return (
@@ -64,28 +70,23 @@ export function Sidebar() {
                       className={cn(
                         "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
                         isActive
-                          ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                          ? "bg-red-600/20 text-red-400 border border-red-500/30"
+                          : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
                       )}
                     >
-                      <item.icon className={cn("w-5 h-5", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
-                      <span className="font-medium">{item.label}</span>
+                      <item.icon className={cn("w-5 h-5", isActive ? "text-red-400" : "text-gray-500")} />
+                      <span className="font-medium text-sm">{item.label}</span>
                     </div>
                 </Link>
               );
             })}
           </nav>
 
-          {/* Footer User Profile Mock */}
-          <div className="p-4 border-t border-border/50">
-            <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-white text-xs font-bold">
-                AD
-              </div>
-              <div className="overflow-hidden">
-                <p className="text-sm font-medium truncate">Admin User</p>
-                <p className="text-xs text-muted-foreground truncate">admin@company.com</p>
-              </div>
+          {/* Footer */}
+          <div className="p-4 border-t border-[#2a2a4a]">
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <p className="text-xs text-gray-400">Dados em tempo real</p>
             </div>
           </div>
         </div>
