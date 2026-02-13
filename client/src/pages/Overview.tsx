@@ -45,7 +45,7 @@ interface Atendimento {
 
 const REFRESH_INTERVAL = 60000; // 60 seconds
 
-const COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f43f5e', '#6366f1', '#a855f7', '#06b6d4', '#84cc16', '#d946ef', '#0ea5e9'];
+const COLORS = ['#009FE3', '#F37021', '#00A650', '#ED1C24', '#00BCD4', '#8b5cf6', '#0077CC', '#14b8a6', '#6366f1', '#a855f7', '#06b6d4', '#84cc16', '#d946ef', '#0ea5e9', '#f43f5e'];
 
 // White tooltip style shared across all charts
 const TOOLTIP_STYLE = {
@@ -53,11 +53,11 @@ const TOOLTIP_STYLE = {
     backgroundColor: '#ffffff',
     borderRadius: '12px',
     border: '1px solid #e5e7eb',
-    color: '#1a1a2e',
+    color: '#0C2135',
     boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
   },
   labelStyle: { color: '#374151', fontWeight: 600 as const },
-  itemStyle: { color: '#1a1a2e' },
+  itemStyle: { color: '#0C2135' },
 };
 
 const PAGE_SIZES = [10, 20, 30, 50, 100];
@@ -155,7 +155,7 @@ export default function OverviewPage() {
       <Layout title="Visão Geral" subtitle="Dashboard de atendimentos em tempo real">
         <div className="flex items-center justify-center h-[60vh]">
           <div className="flex flex-col items-center gap-4">
-            <RefreshCw className="w-8 h-8 text-red-500 animate-spin" />
+            <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
             <p className="text-gray-400">Carregando dados...</p>
           </div>
         </div>
@@ -176,7 +176,7 @@ export default function OverviewPage() {
   return (
     <Layout title="Visão Geral" subtitle="Dashboard de atendimentos em tempo real">
       {/* Refresh Info Bar + Date Filter */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-[#1a1a2e] rounded-xl px-4 py-3 border border-[#2a2a4a] gap-3">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-[#0C2135] rounded-xl px-4 py-3 border border-[#165A8A] gap-3">
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
           <span className="text-xs text-gray-400">
@@ -231,10 +231,10 @@ export default function OverviewPage() {
       </div>
 
       {/* Timeline Chart */}
-      <Card className="bg-[#1a1a2e] border-[#2a2a4a] shadow-lg">
+      <Card className="bg-[#0C2135] border-[#165A8A] shadow-lg">
         <CardHeader>
           <CardTitle className="text-white text-lg flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-red-400" />
+            <TrendingUp className="w-5 h-5 text-blue-400" />
             Volume de Atendimentos
           </CardTitle>
         </CardHeader>
@@ -243,11 +243,11 @@ export default function OverviewPage() {
             <AreaChart data={stats.timeline}>
               <defs>
                 <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#009FE3" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#009FE3" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#2a2a4a" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#165A8A" />
               <XAxis
                 dataKey="data"
                 tickFormatter={(val) => {
@@ -275,7 +275,7 @@ export default function OverviewPage() {
               <Area
                 type="monotone"
                 dataKey="total"
-                stroke="#ef4444"
+                stroke="#009FE3"
                 strokeWidth={2}
                 fillOpacity={1}
                 fill="url(#colorVolume)"
@@ -288,7 +288,7 @@ export default function OverviewPage() {
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Por Canal */}
-        <Card className="bg-[#1a1a2e] border-[#2a2a4a] shadow-lg">
+        <Card className="bg-[#0C2135] border-[#165A8A] shadow-lg">
           <CardHeader>
             <CardTitle className="text-white text-lg flex items-center gap-2">
               <Users className="w-5 h-5 text-blue-400" />
@@ -298,7 +298,7 @@ export default function OverviewPage() {
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={stats.porCanal} layout="vertical" margin={{ left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} vertical={true} stroke="#2a2a4a" />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} vertical={true} stroke="#165A8A" />
                 <XAxis type="number" stroke="#6b7280" fontSize={11} />
                 <YAxis
                   type="category"
@@ -323,7 +323,7 @@ export default function OverviewPage() {
         </Card>
 
         {/* Por Casa — Dynamic height based on number of items */}
-        <Card className="bg-[#1a1a2e] border-[#2a2a4a] shadow-lg">
+        <Card className="bg-[#0C2135] border-[#165A8A] shadow-lg">
           <CardHeader>
             <CardTitle className="text-white text-lg flex items-center gap-2">
               <Building2 className="w-5 h-5 text-green-400" />
@@ -333,7 +333,7 @@ export default function OverviewPage() {
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={stats.porCasa} layout="vertical" margin={{ left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} vertical={true} stroke="#2a2a4a" />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} vertical={true} stroke="#165A8A" />
                 <XAxis type="number" stroke="#6b7280" fontSize={11} />
                 <YAxis
                   type="category"
@@ -359,7 +359,7 @@ export default function OverviewPage() {
       </div>
 
       {/* Top 10 Assuntos — Nuvem de Palavras */}
-      <Card className="bg-[#1a1a2e] border-[#2a2a4a] shadow-lg">
+      <Card className="bg-[#0C2135] border-[#165A8A] shadow-lg">
         <CardHeader>
           <CardTitle className="text-white text-lg flex items-center gap-2">
             <Cloud className="w-5 h-5 text-purple-400" />
@@ -372,7 +372,7 @@ export default function OverviewPage() {
       </Card>
 
       {/* Recent Calls Table with Tabs + Pagination */}
-      <Card className="bg-[#1a1a2e] border-[#2a2a4a] shadow-lg">
+      <Card className="bg-[#0C2135] border-[#165A8A] shadow-lg">
         <CardHeader className="pb-2">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <CardTitle className="text-white text-lg flex items-center gap-2">
@@ -386,7 +386,7 @@ export default function OverviewPage() {
                 <select
                   value={pageSize}
                   onChange={(e) => setPageSize(Number(e.target.value))}
-                  className="bg-[#0f0f1a] text-gray-300 text-xs border border-[#2a2a4a] rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-red-500"
+                  className="bg-[#061726] text-gray-300 text-xs border border-[#165A8A] rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#0047B6]"
                 >
                   {PAGE_SIZES.map((size) => (
                     <option key={size} value={size}>{size}</option>
@@ -403,8 +403,8 @@ export default function OverviewPage() {
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`px-3 py-1.5 text-xs rounded-lg transition-all duration-200 font-medium whitespace-nowrap ${activeTab === tab
-                  ? "bg-red-600 text-white shadow-sm"
-                  : "bg-[#0f0f1a] text-gray-400 hover:text-white hover:bg-white/10 border border-[#2a2a4a]"
+                  ? "bg-[#0047B6] text-white shadow-sm"
+                  : "bg-[#061726] text-gray-400 hover:text-white hover:bg-white/10 border border-[#165A8A]"
                   }`}
               >
                 {tab}
@@ -416,7 +416,7 @@ export default function OverviewPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[#2a2a4a]">
+                <tr className="border-b border-[#165A8A]">
                   <th className="text-left py-3 px-4 text-gray-400 font-medium">Protocolo</th>
                   <th className="text-left py-3 px-4 text-gray-400 font-medium">Contato</th>
                   <th className="text-left py-3 px-4 text-gray-400 font-medium">Canal</th>
@@ -429,7 +429,7 @@ export default function OverviewPage() {
               <tbody>
                 {paginatedData.length > 0 ? (
                   paginatedData.map((item, idx) => (
-                    <tr key={item.id || idx} className="border-b border-[#2a2a4a]/50 hover:bg-white/5 transition-colors">
+                    <tr key={item.id || idx} className="border-b border-[#165A8A]/50 hover:bg-white/5 transition-colors">
                       <td className="py-3 px-4 text-gray-300 font-mono text-xs">{item.protocolo}</td>
                       <td className="py-3 px-4 text-gray-300">{item.contato}</td>
                       <td className="py-3 px-4">
@@ -464,7 +464,7 @@ export default function OverviewPage() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#2a2a4a]">
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#165A8A]">
               <span className="text-xs text-gray-400">
                 Mostrando {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, totalFiltered)} de {totalFiltered}
               </span>
@@ -472,7 +472,7 @@ export default function OverviewPage() {
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-[#0f0f1a] border border-[#2a2a4a] text-gray-300 hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-[#061726] border border-[#165A8A] text-gray-300 hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
                   Anterior
@@ -483,7 +483,7 @@ export default function OverviewPage() {
                 <button
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-[#0f0f1a] border border-[#2a2a4a] text-gray-300 hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-[#061726] border border-[#165A8A] text-gray-300 hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   Próximo
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -572,15 +572,15 @@ function StatCard({ title, value, icon, color, subtitle }: {
   subtitle?: string;
 }) {
   const colorMap = {
-    red: { bg: "bg-red-500/10", text: "text-red-400", border: "border-red-500/20" },
-    blue: { bg: "bg-blue-500/10", text: "text-blue-400", border: "border-blue-500/20" },
-    green: { bg: "bg-green-500/10", text: "text-green-400", border: "border-green-500/20" },
-    amber: { bg: "bg-amber-500/10", text: "text-amber-400", border: "border-amber-500/20" },
+    red: { bg: "bg-[#009FE3]/10", text: "text-sky-400", border: "border-[#009FE3]/20" },
+    blue: { bg: "bg-[#009FE3]/10", text: "text-sky-400", border: "border-[#009FE3]/20" },
+    green: { bg: "bg-[#00A650]/10", text: "text-emerald-400", border: "border-[#00A650]/20" },
+    amber: { bg: "bg-[#F37021]/10", text: "text-orange-400", border: "border-[#F37021]/20" },
   };
   const c = colorMap[color];
 
   return (
-    <div className={`bg-[#1a1a2e] rounded-xl p-5 border ${c.border} shadow-lg`}>
+    <div className={`bg-[#0C2135] rounded-xl p-5 border ${c.border} shadow-lg`}>
       <div className="flex items-center justify-between mb-3">
         <div>
           <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">{title}</span>

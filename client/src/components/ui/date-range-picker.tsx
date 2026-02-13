@@ -94,20 +94,20 @@ export function DateRangePicker({ startDate, endDate, onApply }: DateRangePicker
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <button
-                    className="flex items-center gap-2 px-3 py-2 text-xs bg-[#0f0f1a] border border-[#2a2a4a] rounded-lg text-gray-300 hover:border-[#4a4a6a] hover:text-white transition-all duration-200 min-w-[260px]"
+                    className="flex items-center gap-2 px-3 py-2 text-xs bg-[#060e1a] border border-[#1a3a5c] rounded-lg text-gray-300 hover:border-[#0047B6]/60 hover:text-white transition-all duration-200 min-w-[260px]"
                 >
                     <CalendarDays className="w-4 h-4 text-gray-400 shrink-0" />
                     <span className="text-left flex-1 truncate">{displayText}</span>
                 </button>
             </PopoverTrigger>
             <PopoverContent
-                className="w-auto p-0 bg-[#1a1a2e] border-[#2a2a4a] shadow-2xl rounded-xl overflow-hidden"
+                className="w-auto p-0 bg-[#0a1628] border-[#1a3a5c] shadow-2xl rounded-xl overflow-hidden"
                 align="end"
                 sideOffset={8}
             >
                 <div className="flex">
                     {/* Presets sidebar */}
-                    <div className="border-r border-[#2a2a4a] p-2 min-w-[160px]">
+                    <div className="border-r border-[#1a3a5c] p-2 min-w-[160px]">
                         <p className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold px-3 py-2">
                             Período
                         </p>
@@ -127,7 +127,7 @@ export function DateRangePicker({ startDate, endDate, onApply }: DateRangePicker
                         {/* Selected range display */}
                         <div className="px-4 pt-3 pb-1">
                             <p className="text-[10px] text-gray-500">{selected?.from ? format(selected.from, "yyyy") : ""}</p>
-                            <p className="text-sm font-semibold text-emerald-400">
+                            <p className="text-sm font-semibold text-blue-300">
                                 {selected?.from && selected?.to
                                     ? `${format(selected.from, "d 'de' MMM yyyy", { locale: ptBR })} – ${format(selected.to, "d 'de' MMM yyyy", { locale: ptBR })}`
                                     : "Selecione um período"
@@ -149,7 +149,7 @@ export function DateRangePicker({ startDate, endDate, onApply }: DateRangePicker
                                 caption: "flex justify-center pt-1 relative items-center text-gray-200",
                                 caption_label: "text-sm font-medium text-gray-200",
                                 nav: "space-x-1 flex items-center",
-                                nav_button: "h-7 w-7 bg-transparent p-0 text-gray-400 hover:text-white opacity-70 hover:opacity-100 inline-flex items-center justify-center rounded-md border border-transparent hover:border-[#2a2a4a] transition-colors",
+                                nav_button: "h-7 w-7 bg-transparent p-0 text-gray-400 hover:text-white opacity-70 hover:opacity-100 inline-flex items-center justify-center rounded-md border border-transparent hover:border-[#1a3a5c] transition-colors",
                                 nav_button_previous: "absolute left-1",
                                 nav_button_next: "absolute right-1",
                                 table: "w-full border-collapse space-y-1",
@@ -159,17 +159,17 @@ export function DateRangePicker({ startDate, endDate, onApply }: DateRangePicker
                                 cell: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
                                 day: "h-9 w-9 p-0 font-normal text-gray-300 hover:bg-white/10 rounded-md inline-flex items-center justify-center transition-colors",
                                 day_range_end: "day-range-end",
-                                day_selected: "bg-emerald-600 text-white hover:bg-emerald-500 focus:bg-emerald-600 rounded-md",
+                                day_selected: "bg-[#0047B6] text-white hover:bg-[#003892] focus:bg-[#0047B6] rounded-md",
                                 day_today: "bg-white/10 text-white font-semibold",
                                 day_outside: "text-gray-600 opacity-50",
                                 day_disabled: "text-gray-600 opacity-30",
-                                day_range_middle: "bg-emerald-600/20 text-emerald-300 rounded-none",
+                                day_range_middle: "bg-[#0047B6]/20 text-blue-200 rounded-none",
                                 day_hidden: "invisible",
                             }}
                         />
 
                         {/* Action buttons */}
-                        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-[#2a2a4a]">
+                        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-[#1a3a5c]">
                             <button
                                 onClick={handleClear}
                                 className="flex items-center gap-1 px-3 py-1.5 text-xs text-gray-400 hover:text-white transition-colors rounded-md hover:bg-white/5"
@@ -179,7 +179,7 @@ export function DateRangePicker({ startDate, endDate, onApply }: DateRangePicker
                             <button
                                 onClick={handleConfirm}
                                 disabled={!selected?.from || !selected?.to}
-                                className="flex items-center gap-1 px-4 py-1.5 text-xs bg-emerald-600 text-white rounded-md hover:bg-emerald-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed font-medium"
+                                className="flex items-center gap-1 px-4 py-1.5 text-xs bg-[#0047B6] text-white rounded-md hover:bg-[#003892] transition-colors disabled:opacity-40 disabled:cursor-not-allowed font-medium"
                             >
                                 ✓ Confirmar
                             </button>

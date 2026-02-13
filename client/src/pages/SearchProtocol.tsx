@@ -1,8 +1,8 @@
 import { Layout } from "@/components/layout/Layout";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Search, FileText, User, Phone, Hash, 
+import {
+  Search, FileText, User, Phone, Hash,
   MessageSquare, Clock, Building2, Radio,
   AlertCircle
 } from "lucide-react";
@@ -38,7 +38,7 @@ export default function SearchProtocolPage() {
 
     try {
       const response = await fetch(`/api/protocolo/${encodeURIComponent(trimmed)}`);
-      
+
       if (response.status === 404) {
         setError("Protocolo não encontrado. Verifique o número e tente novamente.");
         return;
@@ -77,13 +77,13 @@ export default function SearchProtocolPage() {
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Digite o número do protocolo..."
-                className="w-full pl-12 pr-4 py-4 rounded-xl bg-[#1a1a2e] border border-[#2a2a4a] text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 transition-all text-lg"
+                className="w-full pl-12 pr-4 py-4 rounded-xl bg-[#0a1628] border border-[#1a3a5c] text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0047B6]/50 focus:border-[#0047B6]/50 transition-all text-lg"
               />
             </div>
             <button
               onClick={handleSearch}
               disabled={isLoading || !query.trim()}
-              className="px-8 py-4 bg-red-600 hover:bg-red-700 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-xl font-medium transition-colors flex items-center gap-2"
+              className="px-8 py-4 bg-[#0047B6] hover:bg-[#003892] disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-xl font-medium transition-colors flex items-center gap-2"
             >
               {isLoading ? (
                 <>
@@ -119,54 +119,54 @@ export default function SearchProtocolPage() {
           </p>
 
           {results.map((item, idx) => (
-            <Card key={item.id || idx} className="bg-[#1a1a2e] border-[#2a2a4a] shadow-lg">
+            <Card key={item.id || idx} className="bg-[#0a1628] border-[#1a3a5c] shadow-lg">
               <CardHeader className="pb-2">
                 <CardTitle className="text-white flex items-center gap-2 text-lg">
-                  <FileText className="w-5 h-5 text-red-400" />
-                  Protocolo: <span className="font-mono text-red-400">{item.protocolo}</span>
+                  <FileText className="w-5 h-5 text-blue-400" />
+                  Protocolo: <span className="font-mono text-blue-400">{item.protocolo}</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <InfoField 
-                    icon={<User className="w-4 h-4 text-blue-400" />} 
-                    label="Contato" 
-                    value={item.contato} 
+                  <InfoField
+                    icon={<User className="w-4 h-4 text-blue-400" />}
+                    label="Contato"
+                    value={item.contato}
                   />
-                  <InfoField 
-                    icon={<Phone className="w-4 h-4 text-green-400" />} 
-                    label="Identificador" 
-                    value={item.identificador} 
+                  <InfoField
+                    icon={<Phone className="w-4 h-4 text-green-400" />}
+                    label="Identificador"
+                    value={item.identificador}
                   />
-                  <InfoField 
-                    icon={<Radio className="w-4 h-4 text-purple-400" />} 
-                    label="Canal" 
-                    value={item.canal} 
+                  <InfoField
+                    icon={<Radio className="w-4 h-4 text-purple-400" />}
+                    label="Canal"
+                    value={item.canal}
                   />
-                  <InfoField 
-                    icon={<Hash className="w-4 h-4 text-amber-400" />} 
-                    label="Tipo de Canal" 
-                    value={item.tipoCanal} 
+                  <InfoField
+                    icon={<Hash className="w-4 h-4 text-amber-400" />}
+                    label="Tipo de Canal"
+                    value={item.tipoCanal}
                   />
-                  <InfoField 
-                    icon={<Clock className="w-4 h-4 text-cyan-400" />} 
-                    label="Início" 
-                    value={formatDateTime(item.dataHoraInicio)} 
+                  <InfoField
+                    icon={<Clock className="w-4 h-4 text-cyan-400" />}
+                    label="Início"
+                    value={formatDateTime(item.dataHoraInicio)}
                   />
-                  <InfoField 
-                    icon={<Clock className="w-4 h-4 text-orange-400" />} 
-                    label="Fim" 
-                    value={formatDateTime(item.dataHoraFim)} 
+                  <InfoField
+                    icon={<Clock className="w-4 h-4 text-orange-400" />}
+                    label="Fim"
+                    value={formatDateTime(item.dataHoraFim)}
                   />
-                  <InfoField 
-                    icon={<Building2 className="w-4 h-4 text-pink-400" />} 
-                    label="Casa" 
-                    value={item.casa} 
+                  <InfoField
+                    icon={<Building2 className="w-4 h-4 text-pink-400" />}
+                    label="Casa"
+                    value={item.casa}
                   />
                 </div>
 
                 {/* Resumo da Conversa */}
-                <div className="mt-4 p-4 rounded-lg bg-[#0f0f1a] border border-[#2a2a4a]">
+                <div className="mt-4 p-4 rounded-lg bg-[#060e1a] border border-[#1a3a5c]">
                   <div className="flex items-center gap-2 mb-2">
                     <MessageSquare className="w-4 h-4 text-gray-400" />
                     <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">Resumo da Conversa</span>
@@ -184,7 +184,7 @@ export default function SearchProtocolPage() {
       {/* Empty State (initial) */}
       {!results && !error && !isLoading && (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="p-6 rounded-full bg-[#1a1a2e] border border-[#2a2a4a] mb-6">
+          <div className="p-6 rounded-full bg-[#0a1628] border border-[#1a3a5c] mb-6">
             <Search className="w-12 h-12 text-gray-600" />
           </div>
           <h3 className="text-xl font-semibold text-gray-400 mb-2">Pesquisar Protocolo</h3>
@@ -199,7 +199,7 @@ export default function SearchProtocolPage() {
 
 function InfoField({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="flex items-start gap-3 p-3 rounded-lg bg-[#0f0f1a]/50">
+    <div className="flex items-start gap-3 p-3 rounded-lg bg-[#060e1a]/50">
       <div className="mt-0.5">{icon}</div>
       <div className="min-w-0">
         <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">{label}</p>

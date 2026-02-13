@@ -129,9 +129,6 @@ export async function registerRoutes(
   // Supports optional ?limit=50 (default 50, max 100)
   app.get("/api/recentes", async (req, res) => {
     try {
-      const limitParam = parseInt(String(req.query.limit || "50"), 10);
-      const limit = Math.min(Math.max(1, limitParam || 50), 100);
-
       const [rows] = await pool.query<RowDataPacket[]>(`
         SELECT
           id,
@@ -147,8 +144,7 @@ export async function registerRoutes(
         FROM \`${TABLE_NAME}\`
         WHERE \`data e hora de fim\` IS NOT NULL
         ORDER BY \`data e hora de fim\` DESC
-        LIMIT ?
-      `, [limit]);
+      `);
 
       res.json(rows);
     } catch (error) {
