@@ -9,12 +9,23 @@ export async function registerRoutes(
 ): Promise<Server> {
 
   // GET /api/stats - Metricas agregadas do dashboard
-  app.get("/api/stats", async (_req, res) => {
+  // Supports optional ?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+  app.get("/api/stats", async (req, res) => {
     try {
       const conn = await pool.getConnection();
 
       try {
-        // Total de atendimentos (hoje, semana, mes, total)
+        const { startDate, endDate } = req.query;
+
+        // Build date filter clause
+        let dateFilter = "";
+        const dateParams: string[] = [];
+        if (startDate && endDate) {
+          dateFilter = `AND DATE(\`data e hora de fim\`) >= ? AND DATE(\`data e hora de fim\`) <= ?`;
+          dateParams.push(String(startDate), String(endDate));
+        }
+
+        // Total de atendimentos filtrado pelo período
         const [totals] = await conn.query<RowDataPacket[]>(`
           SELECT
             COUNT(*) AS total,
@@ -23,7 +34,8 @@ export async function registerRoutes(
             SUM(CASE WHEN YEAR(\`data e hora de fim\`) = YEAR(CURDATE()) AND MONTH(\`data e hora de fim\`) = MONTH(CURDATE()) THEN 1 ELSE 0 END) AS mes
           FROM \`${TABLE_NAME}\`
           WHERE \`data e hora de fim\` IS NOT NULL
-        `);
+            ${dateFilter}
+        `, dateParams);
 
         // Duracao media em minutos
         const [avgDuration] = await conn.query<RowDataPacket[]>(`
@@ -32,7 +44,8 @@ export async function registerRoutes(
           FROM \`${TABLE_NAME}\`
           WHERE \`data e hora de fim\` IS NOT NULL
             AND \`data e hora de inicio\` IS NOT NULL
-        `);
+            ${dateFilter}
+        `, dateParams);
 
         // Atendimentos por canal
         const [porCanal] = await conn.query<RowDataPacket[]>(`
@@ -41,20 +54,23 @@ export async function registerRoutes(
             COUNT(*) AS total
           FROM \`${TABLE_NAME}\`
           WHERE \`data e hora de fim\` IS NOT NULL
+            ${dateFilter}
           GROUP BY canal
           ORDER BY total DESC
-        `);
+        `, dateParams);
 
-        // Atendimentos por casa
+        // Atendimentos por casa — COALESCE empty/null to 'Falta de Interação'
         const [porCasa] = await conn.query<RowDataPacket[]>(`
           SELECT
-            casa AS nome,
+            COALESCE(NULLIF(TRIM(casa), ''), 'Falta de Interação') AS nome,
             COUNT(*) AS total
           FROM \`${TABLE_NAME}\`
           WHERE \`data e hora de fim\` IS NOT NULL
-          GROUP BY casa
+            ${dateFilter}
+          GROUP BY nome
           ORDER BY total DESC
-        `);
+          LIMIT 10
+        `, dateParams);
 
         // Atendimentos por resumo da conversa
         const [porResumo] = await conn.query<RowDataPacket[]>(`
@@ -65,22 +81,29 @@ export async function registerRoutes(
           WHERE \`data e hora de fim\` IS NOT NULL
             AND \`resumo da conversa\` IS NOT NULL
             AND \`resumo da conversa\` != ''
+            ${dateFilter}
           GROUP BY \`resumo da conversa\`
           ORDER BY total DESC
-          LIMIT 15
-        `);
+          LIMIT 10
+        `, dateParams);
 
-        // Volume ao longo do tempo (ultimos 30 dias)
+        // Volume ao longo do tempo (filtered by date range or last 30 days)
+        let timelineFilter = dateFilter;
+        const timelineParams = [...dateParams];
+        if (!startDate || !endDate) {
+          timelineFilter = `AND \`data e hora de fim\` >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)`;
+        }
+
         const [timeline] = await conn.query<RowDataPacket[]>(`
           SELECT
             DATE(\`data e hora de fim\`) AS data,
             COUNT(*) AS total
           FROM \`${TABLE_NAME}\`
           WHERE \`data e hora de fim\` IS NOT NULL
-            AND \`data e hora de fim\` >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+            ${timelineFilter}
           GROUP BY DATE(\`data e hora de fim\`)
           ORDER BY data ASC
-        `);
+        `, timelineParams);
 
         conn.release();
 
@@ -102,9 +125,13 @@ export async function registerRoutes(
     }
   });
 
-  // GET /api/recentes - Ultimos 50 atendimentos finalizados
-  app.get("/api/recentes", async (_req, res) => {
+  // GET /api/recentes - Ultimos atendimentos finalizados
+  // Supports optional ?limit=50 (default 50, max 100)
+  app.get("/api/recentes", async (req, res) => {
     try {
+      const limitParam = parseInt(String(req.query.limit || "50"), 10);
+      const limit = Math.min(Math.max(1, limitParam || 50), 100);
+
       const [rows] = await pool.query<RowDataPacket[]>(`
         SELECT
           id,
@@ -116,12 +143,12 @@ export async function registerRoutes(
           \`data e hora de fim\` AS dataHoraFim,
           \`tipo de canal\` AS tipoCanal,
           \`resumo da conversa\` AS resumoConversa,
-          casa
+          COALESCE(NULLIF(TRIM(casa), ''), 'Falta de Interação') AS casa
         FROM \`${TABLE_NAME}\`
         WHERE \`data e hora de fim\` IS NOT NULL
         ORDER BY \`data e hora de fim\` DESC
-        LIMIT 50
-      `);
+        LIMIT ?
+      `, [limit]);
 
       res.json(rows);
     } catch (error) {
@@ -146,7 +173,7 @@ export async function registerRoutes(
           \`data e hora de fim\` AS dataHoraFim,
           \`tipo de canal\` AS tipoCanal,
           \`resumo da conversa\` AS resumoConversa,
-          casa
+          COALESCE(NULLIF(TRIM(casa), ''), 'Falta de Interação') AS casa
         FROM \`${TABLE_NAME}\`
         WHERE protocolo = ?
         LIMIT 10

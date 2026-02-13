@@ -1,14 +1,17 @@
 import { Sidebar } from "./Sidebar";
+import { SidebarProvider, useSidebar } from "./SidebarContext";
 
-export function Layout({ children, title, subtitle }: { 
+function LayoutInner({ children, title, subtitle }: {
   children: React.ReactNode;
   title: string;
   subtitle?: string;
 }) {
+  const { collapsed } = useSidebar();
+
   return (
     <div className="min-h-screen bg-[#0f0f1a] text-gray-100 flex">
       <Sidebar />
-      <main className="flex-1 md:ml-64 transition-all duration-300">
+      <main className={`flex-1 transition-all duration-300 ${collapsed ? "md:ml-20" : "md:ml-64"}`}>
         <div className="p-4 md:p-8 space-y-6 max-w-[1600px] mx-auto">
           {/* Header Section */}
           <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -25,5 +28,19 @@ export function Layout({ children, title, subtitle }: {
         </div>
       </main>
     </div>
+  );
+}
+
+export function Layout({ children, title, subtitle }: {
+  children: React.ReactNode;
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <SidebarProvider>
+      <LayoutInner title={title} subtitle={subtitle}>
+        {children}
+      </LayoutInner>
+    </SidebarProvider>
   );
 }

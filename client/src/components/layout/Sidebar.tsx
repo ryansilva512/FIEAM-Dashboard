@@ -1,13 +1,16 @@
 import { Link, useLocation } from "wouter";
-import { 
-  LayoutDashboard, 
-  Search, 
+import {
+  LayoutDashboard,
+  Search,
   Menu,
-  X
+  X,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useSidebar } from "./SidebarContext";
 
 const navItems = [
   { href: "/", label: "Visão Geral", icon: LayoutDashboard },
@@ -17,8 +20,7 @@ const navItems = [
 export function Sidebar() {
   const [location] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-
-  const toggle = () => setIsOpen(!isOpen);
+  const { collapsed, toggle } = useSidebar();
 
   return (
     <>
@@ -27,7 +29,7 @@ export function Sidebar() {
         variant="ghost"
         size="icon"
         className="fixed top-4 left-4 z-50 md:hidden text-white"
-        onClick={toggle}
+        onClick={() => setIsOpen(!isOpen)}
       >
         {isOpen ? <X /> : <Menu />}
       </Button>
@@ -35,7 +37,8 @@ export function Sidebar() {
       {/* Sidebar Container */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64 bg-[#1a1a2e] border-r border-[#2a2a4a] shadow-lg transition-transform duration-300 ease-in-out md:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 bg-[#1a1a2e] border-r border-[#2a2a4a] shadow-lg transition-all duration-300 ease-in-out md:translate-x-0",
+          collapsed ? "w-20" : "w-64",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -43,50 +46,67 @@ export function Sidebar() {
           {/* Logo Area */}
           <div className="p-6 border-b border-[#2a2a4a]">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center flex-shrink-0">
                 <span className="text-white font-bold text-lg">P</span>
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-white">
-                  Polo BI
-                </h1>
-                <p className="text-xs text-gray-400">Polo Telecom</p>
-              </div>
+              {!collapsed && (
+                <div className="overflow-hidden">
+                  <h1 className="text-xl font-bold text-white whitespace-nowrap">
+                    Polo BI
+                  </h1>
+                  <p className="text-xs text-gray-400">Polo Telecom</p>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Section Label */}
-          <div className="px-6 pt-6 pb-2">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Dashboards</p>
-          </div>
+          {!collapsed && (
+            <div className="px-6 pt-6 pb-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Dashboards</p>
+            </div>
+          )}
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
+          <nav className={cn("flex-1 px-4 space-y-1 overflow-y-auto", collapsed && "px-2 pt-4")}>
             {navItems.map((item) => {
               const isActive = location === item.href;
               return (
                 <Link key={item.href} href={item.href} className="block" onClick={() => setIsOpen(false)}>
-                    <div
-                      className={cn(
-                        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
-                        isActive
-                          ? "bg-red-600/20 text-red-400 border border-red-500/30"
-                          : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
-                      )}
-                    >
-                      <item.icon className={cn("w-5 h-5", isActive ? "text-red-400" : "text-gray-500")} />
-                      <span className="font-medium text-sm">{item.label}</span>
-                    </div>
+                  <div
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+                      collapsed && "justify-center px-2",
+                      isActive
+                        ? "bg-red-600/20 text-red-400 border border-red-500/30"
+                        : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
+                    )}
+                    title={collapsed ? item.label : undefined}
+                  >
+                    <item.icon className={cn("w-5 h-5 flex-shrink-0", isActive ? "text-red-400" : "text-gray-500")} />
+                    {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
+                  </div>
                 </Link>
               );
             })}
           </nav>
 
+          {/* Collapse Toggle (desktop only) */}
+          <div className="hidden md:flex p-4 border-t border-[#2a2a4a] justify-center">
+            <button
+              onClick={toggle}
+              className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+              title={collapsed ? "Expandir" : "Recolher"}
+            >
+              {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            </button>
+          </div>
+
           {/* Footer */}
           <div className="p-4 border-t border-[#2a2a4a]">
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <p className="text-xs text-gray-400">Dados em tempo real</p>
+            <div className={cn("flex items-center gap-3 p-3 rounded-lg bg-white/5", collapsed && "justify-center p-2")}>
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
+              {!collapsed && <p className="text-xs text-gray-400">Dados em tempo real</p>}
             </div>
           </div>
         </div>
@@ -94,7 +114,7 @@ export function Sidebar() {
 
       {/* Overlay for mobile */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-30 md:hidden backdrop-blur-sm"
           onClick={() => setIsOpen(false)}
         />

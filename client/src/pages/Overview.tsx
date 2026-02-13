@@ -1,18 +1,20 @@
 import { Layout } from "@/components/layout/Layout";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   AreaChart, Area, Cell
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  MessageSquare, Clock, CalendarDays, TrendingUp, 
-  RefreshCw, Users, Building2
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import {
+  MessageSquare, Clock, CalendarDays, TrendingUp,
+  RefreshCw, Users, Building2, ChevronLeft, ChevronRight, Filter, Cloud
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 interface StatsData {
   totais: {
@@ -45,19 +47,52 @@ const REFRESH_INTERVAL = 60000; // 60 seconds
 
 const COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f43f5e', '#6366f1', '#a855f7', '#06b6d4', '#84cc16', '#d946ef', '#0ea5e9'];
 
+// White tooltip style shared across all charts
+const TOOLTIP_STYLE = {
+  contentStyle: {
+    backgroundColor: '#ffffff',
+    borderRadius: '12px',
+    border: '1px solid #e5e7eb',
+    color: '#1a1a2e',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+  },
+  labelStyle: { color: '#374151', fontWeight: 600 as const },
+  itemStyle: { color: '#1a1a2e' },
+};
+
+const PAGE_SIZES = [10, 20, 30, 50, 100];
+
+// Default date range: current month
+function getDefaultDates() {
+  const now = new Date();
+  return {
+    startDate: format(startOfMonth(now), "yyyy-MM-dd"),
+    endDate: format(now, "yyyy-MM-dd"),
+  };
+}
+
 export default function OverviewPage() {
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [countdown, setCountdown] = useState(60);
 
+  // Date range state (default: current month)
+  const [dateRange, setDateRange] = useState(getDefaultDates);
+
+  // Table state
+  const [activeTab, setActiveTab] = useState("Todos");
+  const [pageSize, setPageSize] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
+
+
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useQuery<StatsData>({
-    queryKey: ["stats"],
-    queryFn: () => apiRequest("/api/stats"),
+    queryKey: ["stats", dateRange.startDate, dateRange.endDate],
+    queryFn: () => apiRequest(`/api/stats?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`),
     refetchInterval: REFRESH_INTERVAL,
   });
 
   const { data: recentes, isLoading: recentesLoading, refetch: refetchRecentes } = useQuery<Atendimento[]>({
     queryKey: ["recentes"],
-    queryFn: () => apiRequest("/api/recentes"),
+    queryFn: () => apiRequest("/api/recentes?limit=100"),
     refetchInterval: REFRESH_INTERVAL,
   });
 
@@ -77,12 +112,41 @@ export default function OverviewPage() {
     return () => clearInterval(timer);
   }, []);
 
+  // Reset page when tab or pageSize changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, pageSize]);
+
   const handleManualRefresh = () => {
     refetchStats();
     refetchRecentes();
     setLastUpdated(new Date());
     setCountdown(60);
   };
+
+  // Derive unique channel tabs from data
+  const channelTabs = useMemo(() => {
+    if (!recentes) return ["Todos"];
+    const channels = Array.from(new Set(recentes.map((r) => r.canal))).sort();
+    return ["Todos", ...channels];
+  }, [recentes]);
+
+  // Filtered + paginated data
+  const { paginatedData, totalFiltered, totalPages } = useMemo(() => {
+    if (!recentes) return { paginatedData: [], totalFiltered: 0, totalPages: 0 };
+
+    const filtered = activeTab === "Todos"
+      ? recentes
+      : recentes.filter((r) => r.canal === activeTab);
+
+    const total = filtered.length;
+    const pages = Math.ceil(total / pageSize);
+    const startIdx = (currentPage - 1) * pageSize;
+    const sliced = filtered.slice(startIdx, startIdx + pageSize);
+
+    return { paginatedData: sliced, totalFiltered: total, totalPages: pages };
+  }, [recentes, activeTab, pageSize, currentPage]);
+
 
   const isLoading = statsLoading || recentesLoading;
 
@@ -111,8 +175,8 @@ export default function OverviewPage() {
 
   return (
     <Layout title="Visão Geral" subtitle="Dashboard de atendimentos em tempo real">
-      {/* Refresh Info Bar */}
-      <div className="flex items-center justify-between bg-[#1a1a2e] rounded-xl px-4 py-3 border border-[#2a2a4a]">
+      {/* Refresh Info Bar + Date Filter */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-[#1a1a2e] rounded-xl px-4 py-3 border border-[#2a2a4a] gap-3">
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
           <span className="text-xs text-gray-400">
@@ -122,28 +186,35 @@ export default function OverviewPage() {
             • Próxima em {countdown}s
           </span>
         </div>
-        <button
-          onClick={handleManualRefresh}
-          className="flex items-center gap-2 text-xs text-gray-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          Atualizar
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <DateRangePicker
+            startDate={dateRange.startDate}
+            endDate={dateRange.endDate}
+            onApply={(s, e) => setDateRange({ startDate: s, endDate: e })}
+          />
+          <button
+            onClick={handleManualRefresh}
+            className="flex items-center gap-2 text-xs text-gray-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Atualizar
+          </button>
+        </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - values adapt to date filter */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Total no Período"
+          value={stats.totais.total?.toLocaleString("pt-BR") || "0"}
+          icon={<CalendarDays className="w-5 h-5" />}
+          color="blue"
+        />
         <StatCard
           title="Atendimentos Hoje"
           value={stats.totais.hoje?.toLocaleString("pt-BR") || "0"}
           icon={<MessageSquare className="w-5 h-5" />}
           color="red"
-        />
-        <StatCard
-          title="Esta Semana"
-          value={stats.totais.semana?.toLocaleString("pt-BR") || "0"}
-          icon={<CalendarDays className="w-5 h-5" />}
-          color="blue"
         />
         <StatCard
           title="Este Mês"
@@ -164,7 +235,7 @@ export default function OverviewPage() {
         <CardHeader>
           <CardTitle className="text-white text-lg flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-red-400" />
-            Volume de Atendimentos (Últimos 30 dias)
+            Volume de Atendimentos
           </CardTitle>
         </CardHeader>
         <CardContent className="h-[300px]">
@@ -172,31 +243,26 @@ export default function OverviewPage() {
             <AreaChart data={stats.timeline}>
               <defs>
                 <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#2a2a4a" />
-              <XAxis 
-                dataKey="data" 
+              <XAxis
+                dataKey="data"
                 tickFormatter={(val) => {
                   try {
                     return format(new Date(val), "dd/MM");
                   } catch {
                     return val;
                   }
-                }} 
-                stroke="#6b7280" 
+                }}
+                stroke="#6b7280"
                 fontSize={11}
               />
               <YAxis stroke="#6b7280" fontSize={11} />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#1a1a2e', 
-                  borderRadius: '12px', 
-                  border: '1px solid #2a2a4a',
-                  color: '#fff'
-                }}
+              <RechartsTooltip
+                {...TOOLTIP_STYLE}
                 labelFormatter={(label) => {
                   try {
                     return format(new Date(label), "dd/MM/yyyy");
@@ -206,13 +272,13 @@ export default function OverviewPage() {
                 }}
                 formatter={(value: number) => [value, "Atendimentos"]}
               />
-              <Area 
-                type="monotone" 
-                dataKey="total" 
-                stroke="#ef4444" 
-                strokeWidth={2} 
-                fillOpacity={1} 
-                fill="url(#colorVolume)" 
+              <Area
+                type="monotone"
+                dataKey="total"
+                stroke="#ef4444"
+                strokeWidth={2}
+                fillOpacity={1}
+                fill="url(#colorVolume)"
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -234,16 +300,16 @@ export default function OverviewPage() {
               <BarChart data={stats.porCanal} layout="vertical" margin={{ left: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} vertical={true} stroke="#2a2a4a" />
                 <XAxis type="number" stroke="#6b7280" fontSize={11} />
-                <YAxis 
-                  type="category" 
-                  dataKey="nome" 
-                  width={140} 
-                  stroke="#9ca3af" 
+                <YAxis
+                  type="category"
+                  dataKey="nome"
+                  width={140}
+                  stroke="#9ca3af"
                   fontSize={11}
                   tick={{ fill: '#9ca3af' }}
                 />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#1a1a2e', borderRadius: '12px', border: '1px solid #2a2a4a', color: '#fff' }}
+                <RechartsTooltip
+                  {...TOOLTIP_STYLE}
                   formatter={(value: number) => [value, "Atendimentos"]}
                 />
                 <Bar dataKey="total" radius={[0, 6, 6, 0]} barSize={24}>
@@ -256,7 +322,7 @@ export default function OverviewPage() {
           </CardContent>
         </Card>
 
-        {/* Por Casa */}
+        {/* Por Casa — Dynamic height based on number of items */}
         <Card className="bg-[#1a1a2e] border-[#2a2a4a] shadow-lg">
           <CardHeader>
             <CardTitle className="text-white text-lg flex items-center gap-2">
@@ -269,19 +335,19 @@ export default function OverviewPage() {
               <BarChart data={stats.porCasa} layout="vertical" margin={{ left: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} vertical={true} stroke="#2a2a4a" />
                 <XAxis type="number" stroke="#6b7280" fontSize={11} />
-                <YAxis 
-                  type="category" 
-                  dataKey="nome" 
-                  width={140} 
-                  stroke="#9ca3af" 
+                <YAxis
+                  type="category"
+                  dataKey="nome"
+                  width={160}
+                  stroke="#9ca3af"
                   fontSize={11}
                   tick={{ fill: '#9ca3af' }}
                 />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#1a1a2e', borderRadius: '12px', border: '1px solid #2a2a4a', color: '#fff' }}
+                <RechartsTooltip
+                  {...TOOLTIP_STYLE}
                   formatter={(value: number) => [value, "Atendimentos"]}
                 />
-                <Bar dataKey="total" radius={[0, 6, 6, 0]} barSize={24}>
+                <Bar dataKey="total" radius={[0, 6, 6, 0]} barSize={28}>
                   {stats.porCasa.map((_, index) => (
                     <Cell key={`casa-${index}`} fill={COLORS[(index + 4) % COLORS.length]} />
                   ))}
@@ -292,45 +358,59 @@ export default function OverviewPage() {
         </Card>
       </div>
 
-      {/* Resumo da Conversa Chart */}
+      {/* Top 10 Assuntos — Nuvem de Palavras */}
       <Card className="bg-[#1a1a2e] border-[#2a2a4a] shadow-lg">
         <CardHeader>
           <CardTitle className="text-white text-lg flex items-center gap-2">
-            <MessageSquare className="w-5 h-5 text-purple-400" />
+            <Cloud className="w-5 h-5 text-purple-400" />
             Top Assuntos (Resumo da Conversa)
           </CardTitle>
         </CardHeader>
-        <CardContent className="h-[400px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={stats.porResumo} layout="vertical" margin={{ left: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} vertical={true} stroke="#2a2a4a" />
-              <XAxis type="number" stroke="#6b7280" fontSize={11} />
-              <YAxis 
-                type="category" 
-                dataKey="nome" 
-                width={180} 
-                stroke="#9ca3af" 
-                fontSize={10}
-                tick={{ fill: '#9ca3af' }}
-              />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#1a1a2e', borderRadius: '12px', border: '1px solid #2a2a4a', color: '#fff' }}
-                formatter={(value: number) => [value, "Atendimentos"]}
-              />
-              <Bar dataKey="total" fill="#8b5cf6" radius={[0, 6, 6, 0]} barSize={20}>
-                {stats.porResumo.map((_, index) => (
-                  <Cell key={`resumo-${index}`} fill={COLORS[(index + 2) % COLORS.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+        <CardContent>
+          <AssuntosWordCloud data={stats.porResumo} />
         </CardContent>
       </Card>
 
-      {/* Recent Calls Table */}
+      {/* Recent Calls Table with Tabs + Pagination */}
       <Card className="bg-[#1a1a2e] border-[#2a2a4a] shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-white text-lg">Últimos Atendimentos Finalizados</CardTitle>
+        <CardHeader className="pb-2">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <CardTitle className="text-white text-lg flex items-center gap-2">
+              <Filter className="w-5 h-5 text-amber-400" />
+              Últimos Atendimentos Finalizados
+            </CardTitle>
+            <div className="flex items-center gap-3">
+              {/* Page Size Selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400">Exibir:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value))}
+                  className="bg-[#0f0f1a] text-gray-300 text-xs border border-[#2a2a4a] rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-red-500"
+                >
+                  {PAGE_SIZES.map((size) => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Channel Tabs */}
+          <div className="flex items-center gap-1 mt-3 overflow-x-auto pb-1 scrollbar-thin">
+            {channelTabs.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-3 py-1.5 text-xs rounded-lg transition-all duration-200 font-medium whitespace-nowrap ${activeTab === tab
+                  ? "bg-red-600 text-white shadow-sm"
+                  : "bg-[#0f0f1a] text-gray-400 hover:text-white hover:bg-white/10 border border-[#2a2a4a]"
+                  }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -347,8 +427,8 @@ export default function OverviewPage() {
                 </tr>
               </thead>
               <tbody>
-                {recentes && recentes.length > 0 ? (
-                  recentes.map((item, idx) => (
+                {paginatedData.length > 0 ? (
+                  paginatedData.map((item, idx) => (
                     <tr key={item.id || idx} className="border-b border-[#2a2a4a]/50 hover:bg-white/5 transition-colors">
                       <td className="py-3 px-4 text-gray-300 font-mono text-xs">{item.protocolo}</td>
                       <td className="py-3 px-4 text-gray-300">{item.contato}</td>
@@ -374,18 +454,105 @@ export default function OverviewPage() {
                 ) : (
                   <tr>
                     <td colSpan={7} className="py-8 text-center text-gray-500">
-                      Nenhum atendimento recente encontrado
+                      Nenhum atendimento encontrado
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#2a2a4a]">
+              <span className="text-xs text-gray-400">
+                Mostrando {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, totalFiltered)} de {totalFiltered}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-[#0f0f1a] border border-[#2a2a4a] text-gray-300 hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  Anterior
+                </button>
+                <span className="text-xs text-gray-400 px-2">
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-[#0f0f1a] border border-[#2a2a4a] text-gray-300 hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  Próximo
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </Layout>
   );
 }
+
+// ─── Word Cloud Component ──────────────────────────────────────────
+
+function AssuntosWordCloud({ data }: { data: Array<{ nome: string; total: number }> }) {
+  if (!data || data.length === 0) {
+    return <p className="text-gray-500 text-center py-8">Nenhum dado disponível</p>;
+  }
+
+  const maxTotal = Math.max(...data.map((d) => d.total));
+  const minTotal = Math.min(...data.map((d) => d.total));
+  const grandTotal = data.reduce((sum, d) => sum + d.total, 0);
+
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-3 py-8 px-4 min-h-[200px]">
+      {data.map((item, index) => {
+        const ratio = maxTotal === minTotal ? 0.5 : (item.total - minTotal) / (maxTotal - minTotal);
+        const fontSize = 0.85 + ratio * 1.65; // 0.85rem to 2.5rem
+        const color = COLORS[index % COLORS.length];
+        const percent = ((item.total / grandTotal) * 100).toFixed(1);
+
+        return (
+          <Tooltip key={item.nome}>
+            <TooltipTrigger asChild>
+              <span
+                className="inline-block cursor-default transition-all duration-300 hover:scale-110 hover:brightness-125 select-none"
+                style={{
+                  fontSize: `${fontSize}rem`,
+                  color,
+                  fontWeight: ratio > 0.6 ? 800 : ratio > 0.3 ? 600 : 500,
+                  lineHeight: 1.3,
+                }}
+              >
+                {item.nome}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent
+              className="bg-white text-[#1a1a2e] border border-gray-200 shadow-lg rounded-xl px-4 py-3"
+              sideOffset={8}
+            >
+              <p className="font-bold text-sm capitalize">{item.nome}</p>
+              <div className="flex items-center gap-3 mt-1">
+                <span className="text-xs text-gray-600">
+                  {item.total.toLocaleString("pt-BR")} atendimentos
+                </span>
+                <span className="text-xs font-semibold" style={{ color }}>
+                  {percent}%
+                </span>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Helper Functions ──────────────────────────────────────────────
 
 function formatDateTime(dateStr: string | null): string {
   if (!dateStr) return "-";
@@ -397,11 +564,12 @@ function formatDateTime(dateStr: string | null): string {
   }
 }
 
-function StatCard({ title, value, icon, color }: {
+function StatCard({ title, value, icon, color, subtitle }: {
   title: string;
   value: string | number;
   icon: React.ReactNode;
   color: "red" | "blue" | "green" | "amber";
+  subtitle?: string;
 }) {
   const colorMap = {
     red: { bg: "bg-red-500/10", text: "text-red-400", border: "border-red-500/20" },
@@ -414,7 +582,10 @@ function StatCard({ title, value, icon, color }: {
   return (
     <div className={`bg-[#1a1a2e] rounded-xl p-5 border ${c.border} shadow-lg`}>
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">{title}</span>
+        <div>
+          <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">{title}</span>
+          {subtitle && <p className="text-[10px] text-gray-500 mt-0.5">{subtitle}</p>}
+        </div>
         <div className={`p-2 rounded-lg ${c.bg}`}>
           <span className={c.text}>{icon}</span>
         </div>
