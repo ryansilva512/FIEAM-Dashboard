@@ -91,8 +91,8 @@ export default function OverviewPage() {
   });
 
   const { data: recentes, isLoading: recentesLoading, refetch: refetchRecentes } = useQuery<Atendimento[]>({
-    queryKey: ["recentes"],
-    queryFn: () => apiRequest("/api/recentes?limit=100"),
+    queryKey: ["recentes", dateRange.startDate, dateRange.endDate],
+    queryFn: () => apiRequest(`/api/recentes?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`),
     refetchInterval: REFRESH_INTERVAL,
   });
 

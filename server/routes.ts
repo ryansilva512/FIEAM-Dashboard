@@ -126,8 +126,18 @@ export async function registerRoutes(
   });
 
   // GET /api/recentes - Ultimos atendimentos finalizados (sem duplicatas de protocolo)
+  // Supports optional ?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
   app.get("/api/recentes", async (req, res) => {
     try {
+      const { startDate, endDate } = req.query;
+
+      let dateFilter = "";
+      const dateParams: string[] = [];
+      if (startDate && endDate) {
+        dateFilter = `AND DATE(\`data e hora de fim\`) >= ? AND DATE(\`data e hora de fim\`) <= ?`;
+        dateParams.push(String(startDate), String(endDate));
+      }
+
       const [rows] = await pool.query<RowDataPacket[]>(`
         SELECT
           t.id,
@@ -145,10 +155,11 @@ export async function registerRoutes(
           SELECT MAX(id) AS max_id
           FROM \`${TABLE_NAME}\`
           WHERE \`data e hora de fim\` IS NOT NULL
+            ${dateFilter}
           GROUP BY protocolo
         ) latest ON t.id = latest.max_id
         ORDER BY t.\`data e hora de fim\` DESC
-      `);
+      `, dateParams);
 
       res.json(rows);
     } catch (error) {
