@@ -8,6 +8,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { CasaPicker } from "@/components/ui/casa-picker";
 import {
   MessageSquare, Clock, CalendarDays, TrendingUp,
   RefreshCw, Users, Building2, ChevronLeft, ChevronRight, Filter, Cloud
@@ -78,21 +79,29 @@ export default function OverviewPage() {
   // Date range state (default: current month)
   const [dateRange, setDateRange] = useState(getDefaultDates);
 
+  // Casa (entity) filter — empty array means "Todas"
+  const [selectedCasas, setSelectedCasas] = useState<string[]>([]);
+
   // Table state
   const [activeTab, setActiveTab] = useState("Todos");
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Fetch list of casas for dropdown
+  const { data: casasList } = useQuery<string[]>({
+    queryKey: ["casas"],
+    queryFn: () => apiRequest("/api/casas"),
+  }); const casaParam = selectedCasas.length > 0 ? selectedCasas.map(c => `&casa=${encodeURIComponent(c)}`).join('') : "";
 
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useQuery<StatsData>({
-    queryKey: ["stats", dateRange.startDate, dateRange.endDate],
-    queryFn: () => apiRequest(`/api/stats?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`),
+    queryKey: ["stats", dateRange.startDate, dateRange.endDate, selectedCasas],
+    queryFn: () => apiRequest(`/api/stats?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}${casaParam}`),
     refetchInterval: REFRESH_INTERVAL,
   });
 
   const { data: recentes, isLoading: recentesLoading, refetch: refetchRecentes } = useQuery<Atendimento[]>({
-    queryKey: ["recentes", dateRange.startDate, dateRange.endDate],
-    queryFn: () => apiRequest(`/api/recentes?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`),
+    queryKey: ["recentes", dateRange.startDate, dateRange.endDate, selectedCasas],
+    queryFn: () => apiRequest(`/api/recentes?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}${casaParam}`),
     refetchInterval: REFRESH_INTERVAL,
   });
 
@@ -187,6 +196,12 @@ export default function OverviewPage() {
           </span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Casa filter */}
+          <CasaPicker
+            value={selectedCasas}
+            casas={casasList || []}
+            onChange={setSelectedCasas}
+          />
           <DateRangePicker
             startDate={dateRange.startDate}
             endDate={dateRange.endDate}

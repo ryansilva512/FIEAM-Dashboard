@@ -10,12 +10,28 @@ export async function registerRoutes(
 
   // GET /api/stats - Metricas agregadas do dashboard
   // Supports optional ?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+  // GET /api/casas - Lista de casas distintas
+  app.get("/api/casas", async (_req, res) => {
+    try {
+      const [rows] = await pool.query<RowDataPacket[]>(`
+        SELECT DISTINCT COALESCE(NULLIF(TRIM(casa), ''), 'Falta de Interação') AS nome
+        FROM \`${TABLE_NAME}\`
+        WHERE \`data e hora de fim\` IS NOT NULL
+        ORDER BY nome ASC
+      `);
+      res.json(rows.map((r) => r.nome));
+    } catch (error) {
+      console.error("Erro ao buscar casas:", error);
+      res.status(500).json({ message: "Erro ao buscar casas" });
+    }
+  });
+
   app.get("/api/stats", async (req, res) => {
     try {
       const conn = await pool.getConnection();
 
       try {
-        const { startDate, endDate } = req.query;
+        const { startDate, endDate, casa } = req.query;
 
         // Build date filter clause
         let dateFilter = "";
@@ -24,6 +40,29 @@ export async function registerRoutes(
           dateFilter = `AND DATE(\`data e hora de fim\`) >= ? AND DATE(\`data e hora de fim\`) <= ?`;
           dateParams.push(String(startDate), String(endDate));
         }
+
+        // Build casa filter clause (supports multiple values)
+        let casaFilter = "";
+        const casaParams: string[] = [];
+        if (casa) {
+          const casaArr = Array.isArray(casa) ? casa.map(String) : [String(casa)];
+          const filtered = casaArr.filter(c => c !== 'Todas');
+          if (filtered.length > 0) {
+            const hasFalta = filtered.includes('Falta de Interação');
+            const realCasas = filtered.filter(c => c !== 'Falta de Interação');
+            const conditions: string[] = [];
+            if (realCasas.length > 0) {
+              conditions.push(`TRIM(casa) IN (${realCasas.map(() => '?').join(',')})`);
+              casaParams.push(...realCasas);
+            }
+            if (hasFalta) {
+              conditions.push(`(TRIM(casa) = '' OR casa IS NULL)`);
+            }
+            casaFilter = `AND (${conditions.join(' OR ')})`;
+          }
+        }
+
+        const filterParams = [...dateParams, ...casaParams];
 
         // Total de atendimentos filtrado pelo período (contando protocolos distintos)
         const [totals] = await conn.query<RowDataPacket[]>(`
@@ -35,7 +74,8 @@ export async function registerRoutes(
           FROM \`${TABLE_NAME}\`
           WHERE \`data e hora de fim\` IS NOT NULL
             ${dateFilter}
-        `, dateParams);
+            ${casaFilter}
+        `, filterParams);
 
         // Duracao media em minutos
         const [avgDuration] = await conn.query<RowDataPacket[]>(`
@@ -45,7 +85,8 @@ export async function registerRoutes(
           WHERE \`data e hora de fim\` IS NOT NULL
             AND \`data e hora de inicio\` IS NOT NULL
             ${dateFilter}
-        `, dateParams);
+            ${casaFilter}
+        `, filterParams);
 
         // Atendimentos por canal (protocolos distintos)
         const [porCanal] = await conn.query<RowDataPacket[]>(`
@@ -55,9 +96,10 @@ export async function registerRoutes(
           FROM \`${TABLE_NAME}\`
           WHERE \`data e hora de fim\` IS NOT NULL
             ${dateFilter}
+            ${casaFilter}
           GROUP BY canal
           ORDER BY total DESC
-        `, dateParams);
+        `, filterParams);
 
         // Atendimentos por casa (protocolos distintos) — COALESCE empty/null to 'Falta de Interação'
         const [porCasa] = await conn.query<RowDataPacket[]>(`
@@ -67,10 +109,11 @@ export async function registerRoutes(
           FROM \`${TABLE_NAME}\`
           WHERE \`data e hora de fim\` IS NOT NULL
             ${dateFilter}
+            ${casaFilter}
           GROUP BY nome
           ORDER BY total DESC
           LIMIT 10
-        `, dateParams);
+        `, filterParams);
 
         // Atendimentos por resumo da conversa (protocolos distintos)
         const [porResumo] = await conn.query<RowDataPacket[]>(`
@@ -82,14 +125,15 @@ export async function registerRoutes(
             AND \`resumo da conversa\` IS NOT NULL
             AND \`resumo da conversa\` != ''
             ${dateFilter}
+            ${casaFilter}
           GROUP BY \`resumo da conversa\`
           ORDER BY total DESC
           LIMIT 10
-        `, dateParams);
+        `, filterParams);
 
         // Volume ao longo do tempo (filtered by date range or last 30 days)
         let timelineFilter = dateFilter;
-        const timelineParams = [...dateParams];
+        const timelineParams = [...dateParams, ...casaParams];
         if (!startDate || !endDate) {
           timelineFilter = `AND \`data e hora de fim\` >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)`;
         }
@@ -101,6 +145,7 @@ export async function registerRoutes(
           FROM \`${TABLE_NAME}\`
           WHERE \`data e hora de fim\` IS NOT NULL
             ${timelineFilter}
+            ${casaFilter}
           GROUP BY DATE(\`data e hora de fim\`)
           ORDER BY data ASC
         `, timelineParams);
@@ -129,7 +174,7 @@ export async function registerRoutes(
   // Supports optional ?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
   app.get("/api/recentes", async (req, res) => {
     try {
-      const { startDate, endDate } = req.query;
+      const { startDate, endDate, casa } = req.query;
 
       let dateFilter = "";
       const dateParams: string[] = [];
@@ -137,6 +182,29 @@ export async function registerRoutes(
         dateFilter = `AND DATE(\`data e hora de fim\`) >= ? AND DATE(\`data e hora de fim\`) <= ?`;
         dateParams.push(String(startDate), String(endDate));
       }
+
+      // Build casa filter clause (supports multiple values)
+      let casaFilter = "";
+      const casaParams: string[] = [];
+      if (casa) {
+        const casaArr = Array.isArray(casa) ? casa.map(String) : [String(casa)];
+        const filtered = casaArr.filter(c => c !== 'Todas');
+        if (filtered.length > 0) {
+          const hasFalta = filtered.includes('Falta de Interação');
+          const realCasas = filtered.filter(c => c !== 'Falta de Interação');
+          const conditions: string[] = [];
+          if (realCasas.length > 0) {
+            conditions.push(`TRIM(casa) IN (${realCasas.map(() => '?').join(',')})`);
+            casaParams.push(...realCasas);
+          }
+          if (hasFalta) {
+            conditions.push(`(TRIM(casa) = '' OR casa IS NULL)`);
+          }
+          casaFilter = `AND (${conditions.join(' OR ')})`;
+        }
+      }
+
+      const filterParams = [...dateParams, ...casaParams];
 
       const [rows] = await pool.query<RowDataPacket[]>(`
         SELECT
@@ -156,10 +224,11 @@ export async function registerRoutes(
           FROM \`${TABLE_NAME}\`
           WHERE \`data e hora de fim\` IS NOT NULL
             ${dateFilter}
+            ${casaFilter}
           GROUP BY protocolo
         ) latest ON t.id = latest.max_id
         ORDER BY t.\`data e hora de fim\` DESC
-      `, dateParams);
+      `, filterParams);
 
       res.json(rows);
     } catch (error) {
